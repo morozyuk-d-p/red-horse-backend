@@ -60,9 +60,9 @@ def find_answer(keyword):
     # Устанавливаем соединение с базой данных
     conn = sqlite3.connect("horse_database.db")
     cursor = conn.cursor()
-
-    query = "SELECT answer FROM my_table WHERE LOWER(keywords) LIKE '%' || LOWER(?) || '%'"
-    cursor.execute(query, (keyword.lower(),))
+    search_term = f'% {keyword} %'
+    query = "SELECT answer FROM my_table WHERE ' ' || LOWER(keywords) || ' ' LIKE ?;"
+    cursor.execute(query, (search_term,))
 
     # Получаем результат запроса
     result = cursor.fetchone()
@@ -105,8 +105,12 @@ def assistant(question: AnyStr):
         response += ("До свидания, рад был помочь!")
         return response
 
-    result = next((find_answer(word) for word in WordArray if find_answer(word)), None)
-    return result
+    for word in WordArray:
+        if find_answer(word):
+            print(word)
+            return find_answer(word)
+
+
 
 
 if __name__ == "__main__":
