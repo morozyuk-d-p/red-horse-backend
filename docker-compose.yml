@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    networks:
+      - database
+    env_file:
+      - .env
+
+  db:
+    image: ankane/pgvector
+    networks:
+      - database
+    env_file:
+      - .env_pg
+    volumes:
+      - postgres:/var/lib/postgresql/data:rw
+
+networks:
+  database:
+
+volumes:
+  database:
