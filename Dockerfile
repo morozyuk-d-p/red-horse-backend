@@ -10,4 +10,4 @@ USER horse
 WORKDIR /srv/horse
 RUN python3 -m pip install -r requirements.txt
 
-CMD [ "/usr/bin/env/python3", "./main.py" ]
+CMD [ "/usr/bin/env", "python3", "./main.py" ]

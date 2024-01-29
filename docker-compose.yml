@@ -25,4 +25,4 @@ networks:
   database:
 
 volumes:
-  database:
+  postgres:
