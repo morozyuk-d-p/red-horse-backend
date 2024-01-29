@@ -45,7 +45,13 @@ db = PGVector.from_documents(
     pre_delete_collection=True,
 )
 
-retriever = db.as_retriever()
+retriever = db.as_retriever(
+    search_type="similarity_score_threshold",
+    search_kwargs={
+        "score_threshold": 0.5,
+        "k": 1
+    },
+)
 
 # Creating a main template
 print("Loading template...")
@@ -67,31 +73,40 @@ template_horse = """Ты - конь Тидон, голосовой ассист�
 
 prompt_horse = ChatPromptTemplate.from_template(template_horse)
 
+def debug(arg):
+    print(f'RAG> {arg}')
+    return arg
 
-def pick_most_relevant(docs):
-    return docs[0]
+def pickRandom(documents):
+    document = documents[0]
+    return random.choice(document.page_content[document.page_content.find('answer: ') + 8:].split('; '))
 
+def sanitize(str):
+    return str.replace('\n', ' ').replace('*', '')
 
-def format_document(doc):
-    return doc.page_content[doc.page_content.find("answer: ") + 8 :]
+def route(ctx):
+    if len(ctx["context"]) != 0:
+        return llm_chain
+    else:
+        return error_chain
 
-
-def split_answers(doc):
-    return doc.split("; ")
-
-
-horse_chain = (
+chain = (
     {
-        "context": retriever
-        | pick_most_relevant
-        | format_document
-        | split_answers
-        | random.choice,
-        "query": RunnablePassthrough(),
+        "context": retriever | debug | pickRandom,
+        "query": RunnablePassthrough()
     }
-    | prompt_horse
+    | RunnableLambda(route)
+)
+
+llm_chain = (
+    prompt_horse
     | llm
     | StrOutputParser()
+    | sanitize
+)
+
+error_chain = (
+    "Извините, я не могу ответить на этот вопрос."
 )
 
 # Exposing function to network
@@ -105,7 +120,7 @@ def invoke():
     if not request.json or not "query" in request.json:
         abort(400)
     print(f'USER> {request.json["query"]}')
-    output = horse_chain.invoke(request.json["query"])
+    output = chain.invoke(request.json["query"])
     print(f'AI> {output}')
     print("-" * 80)
     return jsonify({"response": output})
