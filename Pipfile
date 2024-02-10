@@ -4,13 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+Flask = "*"
 langchain = "*"
 langchain-core = "*"
-yandexcloud = "*"
+langchain-community = "*"
 psycopg2-binary = "*"
 pgvector = "*"
 sentence-transformers = "*"
-Flask = "*"
 
 [dev-packages]
 
