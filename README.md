@@ -18,20 +18,4 @@ pipenv shell
 
 ## Using API
 
-There is one route: `/invoke`.
-
-It takes POST requests with JSON body:
-
-```json
-{
-    "query": "your_request_here"
-}
-```
-
-and returns a JSON response:
-
-```json
-{
-    "response": "answer_goes_here"
-}
-```
+Refer to `/docs` URL to learn how to use API
