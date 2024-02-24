@@ -60,11 +60,17 @@ def pickRandom(documents):
         choice = random.choice(document.page_content[document.page_content.find('answer: ') + 8:].split('; '))
         print(f"[PICK] {choice}")
         return choice
+    
+def removeLastSemicolon(string: str):
+    if string[-1] == ';':
+        return string[0:len(string) - 1]
+    else:
+        return string
 
 def route(ctx):
     if len(ctx) != 0:
         debug(ctx)
-        return pickRandom(ctx)
+        return removeLastSemicolon(pickRandom(ctx))
     else:
         print("[DB] No answer found, falling back to error chain...")
         return "Извините, я не могу ответить на этот вопрос."
