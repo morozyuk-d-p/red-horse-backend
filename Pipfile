@@ -12,6 +12,7 @@ pgvector = "*"
 sentence-transformers = "*"
 langserve = {extras = ["all"], version = "*"}
 pydantic = "==1.10.13"
+gigachat = "*"
 
 [dev-packages]
 
