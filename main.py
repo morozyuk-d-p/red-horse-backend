@@ -2,8 +2,9 @@
 # Main
 import os
 
-# Flask
-from flask import Flask, abort, request, jsonify
+# FastAPI + LangServe
+from fastapi import FastAPI
+from langserve import add_routes
 
 # PGVector
 from langchain.document_loaders.csv_loader import CSVLoader
@@ -14,11 +15,14 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 import random
 from langchain_core.runnables import RunnableLambda
 
-print("""NEUROHORSE, rev. 2024.02.09
+print(
+    """NEUROHORSE, rev. 2024.02.09
 (c) Morozyuk Daniil, 2024
 
-[INIT BEGIN]""")
+[INIT BEGIN]"""
+)
 
+# Loading values from environment variables
 print("Loading variables from environment...")
 CONNECTION_STRING = os.environ.get("CONNECTION_STRING")
 
@@ -41,31 +45,45 @@ db = PGVector.from_documents(
 
 retriever = db.as_retriever(
     search_type="similarity_score_threshold",
-    search_kwargs={
-        "score_threshold": 0.3,
-        "k": 1
-    },
+    search_kwargs={"score_threshold": 0.3, "k": 1},
 )
 
+# Exposing function to network
+print("Starting LangServe...")
+print("[INIT DONE]")
+print("-" * 80)
+app = FastAPI(
+    title="NEUROHORSE", version="1.0", description="Red Horse Tidon backend server"
+)
+
+
+# Chain definition
 def debug(arg):
     if len(arg) != 0:
         for index, item in enumerate(arg):
-            print(f'[DB[{index}] DATA]\n{item.page_content}\n[DB[{index}] DATA END]')
-            print(f'[DB[{index}] META] {item.metadata}')
+            print(f"[DB[{index}] DATA]\n{item.page_content}\n[DB[{index}] DATA END]")
+            print(f"[DB[{index}] META] {item.metadata}")
     return arg
+
 
 def pickRandom(documents):
     if len(documents) != 0:
         document = documents[0]
-        choice = random.choice(document.page_content[document.page_content.find('answer: ') + 8:].split('; '))
+        choice = random.choice(
+            document.page_content[document.page_content.find("answer: ") + 8 :].split(
+                "; "
+            )
+        )
         print(f"[PICK] {choice}")
         return choice
-    
+
+
 def removeLastSemicolon(string: str):
-    if string[-1] == ';':
-        return string[0:len(string) - 1]
+    if string[-1] == ";":
+        return string[0 : len(string) - 1]
     else:
         return string
+
 
 def route(ctx):
     if len(ctx) != 0:
@@ -75,25 +93,13 @@ def route(ctx):
         print("[DB] No answer found, falling back to error chain...")
         return "Извините, я не могу ответить на этот вопрос."
 
+
 chain = retriever | RunnableLambda(route)
 
-# Exposing function to network
-print("Starting Flask app...")
-print("[INIT DONE]")
-print("-" * 80)
-app = Flask(__name__)
+add_routes(app, chain, path="/horse")
 
-
-@app.route("/invoke", methods=["POST"])
-def invoke():
-    if not request.json or not "query" in request.json:
-        abort(400)
-    print("-" * 80)
-    print(f'[USER] {request.json["query"]}')
-    output = chain.invoke(request.json["query"])
-    print(f'[AI] {output}')
-    return jsonify({"response": output})
-
-
+# Launch web server on executing script
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=False)
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=5000)

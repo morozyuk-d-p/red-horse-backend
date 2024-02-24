@@ -4,13 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-Flask = "*"
 langchain = "*"
 langchain-core = "*"
 langchain-community = "*"
 psycopg2-binary = "*"
 pgvector = "*"
 sentence-transformers = "*"
+langserve = {extras = ["all"], version = "*"}
+pydantic = "==1.10.13"
 
 [dev-packages]
 
