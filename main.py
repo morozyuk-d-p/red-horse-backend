@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 # Main
+import random
 import os
+import base64
 
 # FastAPI + LangServe
 from fastapi import FastAPI
 from langserve import add_routes
 
+# Chain toolkit
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+
+# GigaChat
+from langchain_community.chat_models.gigachat import GigaChat
+
 # PGVector
 from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.vectorstores.pgvector import PGVector
 from langchain_community.embeddings import HuggingFaceEmbeddings
-
-# Answers formatting
-import random
-from langchain_core.runnables import RunnableLambda
 
 print(
     """NEUROHORSE, rev. 2024.02.09
@@ -25,6 +31,18 @@ print(
 # Loading values from environment variables
 print("Loading variables from environment...")
 CONNECTION_STRING = os.environ.get("CONNECTION_STRING")
+GIGACHAT_CLIENT_ID = os.environ.get("GIGACHAT_CLIENT_ID")
+GIGACHAT_CLIENT_SECRET = os.environ.get("GIGACHAT_CLIENT_SECRET")
+
+# Establish link with GigaChat
+print("Establishing link with GigaChat API...")
+giga = GigaChat(
+    credentials=base64.b64encode(
+        f"{GIGACHAT_CLIENT_ID}:{GIGACHAT_CLIENT_SECRET}".encode()
+    ).decode(),
+    verify_ssl_certs=False,
+)
+
 
 # Loading data to PGVector and creating a retriever
 print("Loading embeddings model...")
@@ -57,7 +75,36 @@ app = FastAPI(
 )
 
 
+@app.get("/")
+def onVisitMain():
+    return "Игого! Я конь Тидон!"
+
+
 # Chain definition
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            Представь, что ты конь Тидон - харизматичный, темпераментный, весёлый и шутливый гид по Ростовской области.
+            Ты используешь базу данных в качестве справки для ответа пользователям.
+            Правила взаимодействия с пользователями:
+            - Составляй предложения кратко, но доходчиво, чтобы ответы подходили для устного прослушивания.
+            - Ограничь длину ответа до 2-3 предложений.
+            - Не используй разметку Markdown и спецсимволы.
+            """,
+        ),
+        (
+            "human",
+            """
+            Мой вопрос: {question}
+            Информация из базы данных: {context}
+            """,
+        ),
+    ]
+)
+
+
 def debug(arg):
     if len(arg) != 0:
         for index, item in enumerate(arg):
@@ -94,9 +141,21 @@ def route(ctx):
         return "Извините, я не могу ответить на этот вопрос."
 
 
-chain = retriever | RunnableLambda(route)
+rag_chain = (
+    {
+        "question": RunnablePassthrough(),
+        "context": retriever | RunnableLambda(route),
+    }
+    | prompt
+    | giga
+    | StrOutputParser()
+)
 
-add_routes(app, chain, path="/horse")
+db_chain = retriever | RunnableLambda(route)
+
+add_routes(app, giga, path="/giga")
+add_routes(app, rag_chain, path="/rag", input_type=str)
+add_routes(app, db_chain, path="/db")
 
 # Launch web server on executing script
 if __name__ == "__main__":
