@@ -8,6 +8,7 @@ COPY --chown=horse:horse . /srv/horse
 USER horse
 
 WORKDIR /srv/horse
-RUN python3 -m pip install -r requirements.txt
+RUN pip install pipenv
+RUN pipenv install --system
 
 CMD [ "/usr/bin/env", "python3", "./main.py" ]
