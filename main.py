@@ -105,11 +105,15 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 
-def debug(arg):
+def logRAG(arg):
     if len(arg) != 0:
         for index, item in enumerate(arg):
             print(f"[DB[{index}] DATA]\n{item.page_content}\n[DB[{index}] DATA END]")
             print(f"[DB[{index}] META] {item.metadata}")
+    return arg
+
+def logLLM(arg):
+    print(f"[LLM] {arg}")
     return arg
 
 
@@ -134,7 +138,7 @@ def removeLastSemicolon(string: str):
 
 def route(ctx):
     if len(ctx) != 0:
-        debug(ctx)
+        logRAG(ctx)
         return removeLastSemicolon(pickRandom(ctx))
     else:
         print("[DB] No answer found, falling back to error chain...")
@@ -149,6 +153,7 @@ rag_chain = (
     | prompt
     | giga
     | StrOutputParser()
+    | logLLM
 )
 
 db_chain = retriever | RunnableLambda(route)
